@@ -1,171 +1,90 @@
 package com.example.wmpprojectfireaicamera;
 
-import android.content.Context;
-import android.content.res.AssetFileDescriptor;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.ImageFormat;
-import android.graphics.Rect;
-import android.graphics.YuvImage;
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
-import androidx.camera.core.Preview;
-import androidx.fragment.app.Fragment;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageAnalysis;
-import androidx.camera.core.ImageProxy;
+import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
+import androidx.camera.view.PreviewView;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.appcompat.widget.AppCompatButton;
+import androidx.fragment.app.Fragment;
 
-import org.tensorflow.lite.Interpreter;
+import com.google.common.util.concurrent.ListenableFuture;
 
-import java.io.ByteArrayOutputStream;
-import java.io.FileInputStream;
-import java.nio.ByteBuffer;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutionException;
 
 public class CameraFragment extends Fragment {
-    private static final String TAG = "CameraFragment";
-    private ExecutorService cameraExecutor;
-    private Interpreter tfliteModel;
-    private long lastCaptureTime = 0;
-    private static final long CAPTURE_INTERVAL_MS = 1000;
-    private boolean isModelLoaded = false;
-    private final CountDownLatch modelLoadedLatch = new CountDownLatch(1);
+    private static final int CAMERA_PERMISSION_REQUEST_CODE = 100;
+    private PreviewView viewFinder;
 
+    @Nullable
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_camera, container, false);
-        cameraExecutor = Executors.newSingleThreadExecutor();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    tfliteModel = loadModel(requireContext());
-                    isModelLoaded = true;
-                    modelLoadedLatch.countDown();
-                    Log.d(TAG, "Model loaded successfully.");
-                } catch (Exception e) {
-                    Log.e(TAG, "Error loading model", e);
-                }
-            }
-        }).start();
-
-        startCamera();
-        return view;
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_camera, container, false);
     }
 
-    private Interpreter loadModel(Context context) throws Exception {
-        AssetFileDescriptor fileDescriptor = context.getAssets().openFd("fire_detection_model.tflite");
-        FileInputStream inputStream = fileDescriptor.createInputStream();
-        MappedByteBuffer modelBuffer = inputStream.getChannel().map(FileChannel.MapMode.READ_ONLY, 0, fileDescriptor.getLength());
-        Interpreter.Options options = new Interpreter.Options();
-        options.setNumThreads(4);
-        return new Interpreter(modelBuffer, options);
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        viewFinder = view.findViewById(R.id.viewFinder);
+
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestCameraPermission();
+        } else {
+            startCamera();
+        }
+    }
+
+    private void requestCameraPermission() {
+        ActivityCompat.requestPermissions(requireActivity(),
+                new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST_CODE);
     }
 
     private void startCamera() {
-        ProcessCameraProvider.getInstance(requireContext()).addListener(() -> {
+        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext());
+        cameraProviderFuture.addListener(() -> {
             try {
-                ProcessCameraProvider cameraProvider = ProcessCameraProvider.getInstance(requireContext()).get();
-                CameraSelector cameraSelector = new CameraSelector.Builder()
-                        .requireLensFacing(CameraSelector.LENS_FACING_BACK)
-                        .build();
+                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+                Log.d("CameraFragment", "Camera provider running");
 
                 Preview preview = new Preview.Builder().build();
-                ImageAnalysis imageAnalysis = new ImageAnalysis.Builder().build();
-                imageAnalysis.setAnalyzer(cameraExecutor, image -> {
-                    try {
-                        modelLoadedLatch.await();
-                        if (!isModelLoaded) {
-                            Log.e(TAG, "Model not loaded yet.");
-                            image.close();
-                            return;
-                        }
+                preview.setSurfaceProvider(viewFinder.getSurfaceProvider());
 
-                        long currentTime = System.currentTimeMillis();
-                        if (currentTime - lastCaptureTime > CAPTURE_INTERVAL_MS) {
-                            Bitmap bitmap = convertYuv420888ToBitmap(image);
-                            if (bitmap != null) {
-                                float[][] inputData = preprocessBitmap(bitmap);
-                                float[][] outputData = new float[1][1];  // Adjust based on model's output shape
-                                tfliteModel.run(inputData, outputData);  // Run inference
-                                Log.d(TAG, "Inference result: " + outputData[0][0]);
-                                lastCaptureTime = currentTime;
-                            }
-                        }
-                    } catch (InterruptedException e) {
-                        Log.e(TAG, "Model loading interrupted", e);
-                    } finally {
-                        image.close();
-                    }
+                CameraSelector cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
+
+                ImageAnalysis imageAnalysis = new ImageAnalysis.Builder().build();
+                imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(requireContext()), imageProxy -> {
+                    imageProxy.close();
                 });
 
-                cameraProvider.bindToLifecycle(this, cameraSelector, imageAnalysis, preview);
-            } catch (Exception e) {
-                e.printStackTrace();
+                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis);
+            } catch (ExecutionException | InterruptedException e) {
+                Log.e("CameraFragment", "Error initializing camera", e);
             }
         }, ContextCompat.getMainExecutor(requireContext()));
     }
 
-    private Bitmap convertYuv420888ToBitmap(ImageProxy image) {
-        ImageProxy.PlaneProxy[] planes = image.getPlanes();
-        if (planes.length < 3) {
-            Log.e(TAG, "Invalid number of planes: " + planes.length);
-            return null;
-        }
-        ByteBuffer yBuffer = planes[0].getBuffer();
-        ByteBuffer uBuffer = planes[1].getBuffer();
-        ByteBuffer vBuffer = planes[2].getBuffer();
-
-        byte[] yuv420sp = new byte[yBuffer.remaining() + uBuffer.remaining() + vBuffer.remaining()];
-        yBuffer.get(yuv420sp, 0, yBuffer.remaining());
-        uBuffer.get(yuv420sp, yBuffer.remaining(), uBuffer.remaining());
-        vBuffer.get(yuv420sp, yBuffer.remaining() + uBuffer.remaining(), vBuffer.remaining());
-
-        YuvImage yuvImage = new YuvImage(yuv420sp, ImageFormat.NV21, image.getWidth(), image.getHeight(), null);
-
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        yuvImage.compressToJpeg(new Rect(0, 0, image.getWidth(), image.getHeight()), 100, outputStream);
-        byte[] jpegData = outputStream.toByteArray();
-        return BitmapFactory.decodeByteArray(jpegData, 0, jpegData.length);
-    }
-
-    private float[][] preprocessBitmap(Bitmap bitmap) {
-        Bitmap resizedBitmap = Bitmap.createScaledBitmap(bitmap, 224, 224, true);
-        ByteBuffer byteBuffer = ByteBuffer.allocateDirect(4 * 224 * 224 * 3);  // Assuming RGB input
-        int[] pixels = new int[224 * 224];
-        resizedBitmap.getPixels(pixels, 0, 224, 0, 0, 224, 224);
-
-        for (int pixel : pixels) {
-            byteBuffer.putFloat(((pixel >> 16) & 0xFF) / 255.0f);
-            byteBuffer.putFloat(((pixel >> 8) & 0xFF) / 255.0f);
-            byteBuffer.putFloat((pixel & 0xFF) / 255.0f);
-        }
-
-        float[][] inputData = new float[1][224 * 224 * 3];
-        byteBuffer.rewind();
-        byteBuffer.get();
-
-        return inputData;
-    }
-
     @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        cameraExecutor.shutdown();
-        if (tfliteModel != null) {
-            tfliteModel.close();
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startCamera();
+            } else {
+                Toast.makeText(requireContext(), "Camera permission denied.", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 }
