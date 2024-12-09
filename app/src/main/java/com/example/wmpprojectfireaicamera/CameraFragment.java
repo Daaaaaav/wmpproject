@@ -19,6 +19,7 @@ import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
@@ -27,6 +28,7 @@ import java.util.concurrent.ExecutionException;
 public class CameraFragment extends Fragment {
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 100;
     private PreviewView viewFinder;
+    private FireDetectionViewModel fireDetectionViewModel;
 
     @Nullable
     @Override
@@ -38,7 +40,13 @@ public class CameraFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         viewFinder = view.findViewById(R.id.viewFinder);
-
+        fireDetectionViewModel = new ViewModelProvider(requireActivity()).get(FireDetectionViewModel.class);
+        fireDetectionViewModel.getFireAlert().observe(getViewLifecycleOwner(), message -> {
+            if (message != null) {
+                Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show();
+                Log.d("CameraFragment", "Fire alert received: " + message);
+            }
+        });
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)
                 != PackageManager.PERMISSION_GRANTED) {
             requestCameraPermission();

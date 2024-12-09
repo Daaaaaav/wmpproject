@@ -57,4 +57,5 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-analytics")
     implementation ("com.google.code.gson:gson:2.8.8")
+    implementation ("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.1")
 }
