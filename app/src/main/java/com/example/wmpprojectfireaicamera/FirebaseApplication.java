@@ -7,6 +7,6 @@ public class FirebaseApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        FirebaseApp.initializeApp(this);  // Initialize Firebase here
+        FirebaseApp.initializeApp(this);
     }
 }

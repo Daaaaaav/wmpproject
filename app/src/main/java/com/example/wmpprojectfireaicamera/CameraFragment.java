@@ -36,11 +36,11 @@ import java.util.concurrent.Executors;
 public class CameraFragment extends Fragment {
     private static final String TAG = "CameraFragment";
     private ExecutorService cameraExecutor;
-    private Interpreter tfliteModel;  // TensorFlow Lite model
+    private Interpreter tfliteModel;
     private long lastCaptureTime = 0;
-    private static final long CAPTURE_INTERVAL_MS = 1000;  // Capture every second
+    private static final long CAPTURE_INTERVAL_MS = 1000;
     private boolean isModelLoaded = false;
-    private final CountDownLatch modelLoadedLatch = new CountDownLatch(1);  // Synchronization latch
+    private final CountDownLatch modelLoadedLatch = new CountDownLatch(1);
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -53,7 +53,7 @@ public class CameraFragment extends Fragment {
                 try {
                     tfliteModel = loadModel(requireContext());
                     isModelLoaded = true;
-                    modelLoadedLatch.countDown();  // Signal that the model is loaded
+                    modelLoadedLatch.countDown();
                     Log.d(TAG, "Model loaded successfully.");
                 } catch (Exception e) {
                     Log.e(TAG, "Error loading model", e);
@@ -70,7 +70,7 @@ public class CameraFragment extends Fragment {
         FileInputStream inputStream = fileDescriptor.createInputStream();
         MappedByteBuffer modelBuffer = inputStream.getChannel().map(FileChannel.MapMode.READ_ONLY, 0, fileDescriptor.getLength());
         Interpreter.Options options = new Interpreter.Options();
-        options.setNumThreads(4);  // Set threads as needed
+        options.setNumThreads(4);
         return new Interpreter(modelBuffer, options);
     }
 
@@ -86,7 +86,7 @@ public class CameraFragment extends Fragment {
                 ImageAnalysis imageAnalysis = new ImageAnalysis.Builder().build();
                 imageAnalysis.setAnalyzer(cameraExecutor, image -> {
                     try {
-                        modelLoadedLatch.await();  // Wait until the model is loaded
+                        modelLoadedLatch.await();
                         if (!isModelLoaded) {
                             Log.e(TAG, "Model not loaded yet.");
                             image.close();
@@ -142,19 +142,18 @@ public class CameraFragment extends Fragment {
     }
 
     private float[][] preprocessBitmap(Bitmap bitmap) {
-        // Resize and normalize the bitmap before inference (e.g., resize to 224x224, and normalize)
         Bitmap resizedBitmap = Bitmap.createScaledBitmap(bitmap, 224, 224, true);
         ByteBuffer byteBuffer = ByteBuffer.allocateDirect(4 * 224 * 224 * 3);  // Assuming RGB input
         int[] pixels = new int[224 * 224];
         resizedBitmap.getPixels(pixels, 0, 224, 0, 0, 224, 224);
 
         for (int pixel : pixels) {
-            byteBuffer.putFloat(((pixel >> 16) & 0xFF) / 255.0f);  // Red channel
-            byteBuffer.putFloat(((pixel >> 8) & 0xFF) / 255.0f);   // Green channel
-            byteBuffer.putFloat((pixel & 0xFF) / 255.0f);          // Blue channel
+            byteBuffer.putFloat(((pixel >> 16) & 0xFF) / 255.0f);
+            byteBuffer.putFloat(((pixel >> 8) & 0xFF) / 255.0f);
+            byteBuffer.putFloat((pixel & 0xFF) / 255.0f);
         }
 
-        float[][] inputData = new float[1][224 * 224 * 3];  // Example, adjust based on model input
+        float[][] inputData = new float[1][224 * 224 * 3];
         byteBuffer.rewind();
         byteBuffer.get();
 

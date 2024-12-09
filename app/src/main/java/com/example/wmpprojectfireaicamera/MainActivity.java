@@ -91,7 +91,7 @@ public class MainActivity extends AppCompatActivity {
                 Log.d("MainActivity", "Camera permission granted");
             } else {
                 Log.e("MainActivity", "Camera permission denied");
-                finish(); // Optional: Close the app if the permission is critical
+                finish();
             }
         }
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);

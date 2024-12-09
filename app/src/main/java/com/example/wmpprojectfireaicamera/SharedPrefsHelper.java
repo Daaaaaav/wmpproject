@@ -21,45 +21,21 @@ public class SharedPrefsHelper {
         gson = new Gson();
     }
 
-    // Save fire record to SharedPreferences
-    public void saveFireRecord(String message) {
-        List<String> records = getFireRecords();
-        records.add(message);
-        saveFireRecords(records);
-    }
-
-    // Get fire records from SharedPreferences
     public List<String> getFireRecords() {
         String json = sharedPreferences.getString(FIRE_RECORDS_KEY, null);
         if (json == null) {
-            return new ArrayList<>(); // Return empty list if no records found
+            return new ArrayList<>();
         }
         Type type = new TypeToken<List<String>>() {}.getType();
         return gson.fromJson(json, type);
     }
 
-    // Get the last fire record from SharedPreferences
     public String getLastRecord() {
         List<String> records = getFireRecords();
         if (records.size() > 0) {
-            return records.get(records.size() - 1); // Return the last record
+            return records.get(records.size() - 1);
         } else {
-            return null; // Return null if there are no records
+            return null;
         }
-    }
-
-    // Clear all fire records
-    public void clearFireRecords() {
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.remove(FIRE_RECORDS_KEY);
-        editor.apply();
-    }
-
-    // Helper method to save the list of fire records
-    private void saveFireRecords(List<String> records) {
-        String json = gson.toJson(records);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putString(FIRE_RECORDS_KEY, json);
-        editor.apply();
     }
 }
