@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "387093138876",
+    "firebase_url": "https://wmpproject-firecamera-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "wmpproject-firecamera",
+    "storage_bucket": "wmpproject-firecamera.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:387093138876:android:bb7daba60da480b2fbefb9",
+        "android_client_info": {
+          "package_name": "com.example.wmpprojectfireaicamera"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDbcixdEbuUFQUt_u8tfXpcI-eL_p0yx6w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

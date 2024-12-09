@@ -1,0 +1,54 @@
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/backgroundDark"
+    android:gravity="center"
+    android:padding="20dp">
+
+    <ImageView
+        android:id="@+id/fireLogo"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:src="@drawable/logo_fire"
+        android:contentDescription="Fire Alarm Logo"
+        android:layout_gravity="center" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="20dp" />
+
+    <Button
+        android:id="@+id/btnCamera"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Open Camera"
+        android:textSize="23dp"
+        android:backgroundTint="@color/buttonRed"
+        android:textColor="@color/white"
+        android:padding="12dp"
+        android:layout_marginBottom="10dp" />
+
+    <Button
+        android:id="@+id/btnDataBacklog"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Open Data Backlog"
+        android:textSize="20dp"
+        android:backgroundTint="@color/buttonBlue"
+        android:textColor="@color/white"
+        android:padding="12dp" />
+
+    <TextView
+        android:id="@+id/txtLastRecord"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/fireLogo"
+        android:layout_marginTop="16dp"
+        android:text="No flames detected"
+        android:textColor="@color/white"
+        android:textSize="18dp" />
+
+
+</LinearLayout>
